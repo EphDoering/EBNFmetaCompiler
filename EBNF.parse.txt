@@ -1,0 +1,256 @@
+EBNF for EBNF ignoring white space and comments (I was planning on figuring that out later)
+
+SYNTAX =  SYNTAX RULE, (: SYNTAX RULE :).
+SYNTAX RULE =  META IDENTIFIER, '=', DEFINITIONS LIST, '.' .
+DEFINITIONS LIST = SINGLE DEFINITION, (: '/', SINGLE DEFINITION :).
+SINGLE DEFINITION = TERM, (: ',', TERM :).
+TERM = FACTOR, (/ '-', EXCEPTION /) . 
+EXCEPTION = FACTOR .
+FACTOR = (/ INTEGER, '*' /), PRIMARY. 
+PRIMARY = OPTIONAL SEQUENCE / REPEATED SEQUENCE
+		/ SPECIAL SEQUENCE / GROUPED SEQUENCE
+		/ META IDENTIFIER / TERMINAL / EMPTY. 
+EMPTY = .
+OPTIONAL SEQUENCE = '(/', DEFINITIONS LIST, '/)' .
+REPEATED SEQUENCE = '(:', DEFINITIONS LIST, ':)' .
+GROUPED SEQUENCE = '(', DEFINITIONS LIST, ')'. 
+TERMINAL = "'", CHARACTER - "'", (: CHARACTER - "'" :), "'" 
+		 / '"', CHARACTER - '"', (: CHARACTER - '"' :), '"'. 
+META IDENTIFIER = LETTER, (: LETTER / DIGIT :).
+INTEGER = DIGIT, (: DIGIT :).
+SPECIAL SEQUENCE = '?', (: CHARACTER - '?' :),'?'. 
+
+
+Numbering of the primary states in the state machine:
+(I'm not sure if ending should really have a state, maybe they should all just have the same state since the state they actually will transition too will from from the state stack)
+
+SYNTAX =  1 SYNTAX RULE, 2 (: SYNTAX RULE :).
+SYNTAX RULE =  3 META IDENTIFIER, 4 '=', 5 DEFINITIONS LIST, 6 '.' 7.
+DEFINITIONS LIST = 8 SINGLE DEFINITION, 9(: '/', 10 SINGLE DEFINITION :).
+SINGLE DEFINITION = 11 TERM,  12 (: ',',13  TERM :).
+TERM =  14 FACTOR, 15 (/ '-', 16 EXCEPTION /) . 17
+EXCEPTION = 18 FACTOR 19.
+FACTOR = 20 (/ INTEGER,  21 '*' /), 22 PRIMARY. 23 
+PRIMARY = 24 OPTIONAL SEQUENCE / REPEATED SEQUENCE
+		/ SPECIAL SEQUENCE / GROUPED SEQUENCE
+		/ META IDENTIFIER / TERMINAL / EMPTY. 25
+EMPTY = 26.
+OPTIONAL SEQUENCE = 27'(', 28 '/', 29 DEFINITIONS LIST, 30 '/', 31 ')' 32.
+REPEATED SEQUENCE = 33'(',34':', 35 DEFINITIONS LIST, 36 ':', 37 ')' 38.
+GROUPED SEQUENCE = 39'(', 40 DEFINITIONS LIST, 41 ')'. 42 
+TERMINAL = 43 "'", 44 CHARACTER - "'", 45 (: CHARACTER - "'" :), "'" 46
+		 / 43 '"', 47 CHARACTER - '"', 48 (: CHARACTER - '"' :), '"'.46
+META IDENTIFIER =  50 LETTER, 51 (: LETTER / DIGIT :).
+INTEGER = 52 DIGIT, 53 (: DIGIT :).
+SPECIAL SEQUENCE =  54 '?', 55 (: CHARACTER - '?' :),'?'. 56
+
+LETTER DIGIT and CHARACTER should be defined as well. However, EBNF speficies seferal built in IDENTIFIERS and I think they should be included and for the sake of manually parsing this EBNF I don't think it's critical. (Especially because CHARACTER is encoding dependant and it would matter if we're parsing by byte of character then which is not something I really want to deal with yet)
+
+
+Beginnings of me manually generating the state transition table.
+Notation:
+StateTransitionList = (: StateTranstion, NewLine :)
+
+(* the state is the current state, then followed by all possible transitions *)
+StateTranstion = State, CharacterList, Transition, (: "		|", CharacterList, transition)
+
+(* each character list is the list of characters / state states that could be valid to allow the transition that follows it *)
+CharacterList = ( CharacterListTerm / "[",CharacterListOptions,"]" ), (: StateP :)
+CharacterListOptions = CharacterList, "  |  ", CharacterList , (: "  |  ", CharacterList :)
+CharacterListTerm = CHAR, (: CHAR :)
+
+(* L is for LETTER, D for DIGIT, ~ for a long character list that is context dependant that I can only use because I'm processing this manually, Symbol any of the characters that appear in the terminal strings in the EBNF *)
+CHAR = "L" / "D" / "~" / Symbol
+
+StateP = State | "*"
+
+(* the transitions are change state, consume character and change state, push a state on the stack and change state, and pop to a state off the stack.
+Transition = (" -> ", State)|(" => ", State)|(" -v ", State)|(" -^ ", State)
+
+1 L -v 3 2
+2 L -v 3 2		| E 0 -^ 0
+3 L -v 50 4
+4 = => 5
+5 .,/-D(?'"L -v 8 6
+6 . => 7
+7 [L 1  | LE 2] -^ 2
+8 [. 5  |  / 29  | : 35  |  ) 40 | ,/-D(?'"L] -v 11 9
+9 / => 10		| . 5 -^ 6		| / 29 -^ 30		| : 35 -^ 36		| ) 40 -^ 41
+10 [. 5  |  / 29  | : 35  |  ) 40 | ,/-D(?'"L] -v 11 9
+11 [[. 5  |  / 29  | : 35  |  ) 40]* | ,/-D(?'"L] -v 14 12
+12 , => 13		| [/  |  . 5  |  / 29  | : 35  |  ) 40]* -^ 9
+13 [[. 5  |  / 29  | : 35  |  ) 40]* | ,/-D(?'"L] -v 14 12
+14 [[[. 5  |  / 29  | : 35  |  ) 40]* | ,]*  |  /-D(?'"L] -v 20 15
+15 - => 16		| [[. 5  |  / 29  | : 35  |  ) 40]** | ,/] > 17
+16 [[[/  |  . 5  |  / 29  | : 35  |  ) 40]* | ,]*  |  D(?'"L]-v 18 17
+17 [[/  |  . 5  |  / 29  | : 35  |  ) 40]* | ,]* -^ 12
+18 [[[/  |  . 5  |  / 29  | : 35  |  ) 40]* | ,]**  |  D(?'"L]-v 20 19
+19 [[/  |  . 5  |  / 29  | : 35  |  ) 40]* | ,]** -^ 17
+20 D -v 52 21		| [[[[/  |  . 5  |  / 29  | : 35  |  ) 40]* | ,]*  |  -]14  |  [[/  |  . 5  |  / 29  | : 35  |  ) 40]* | ,]**18  |  (?'"L] > 22
+21 * => 22
+22 [[[[/  |  . 5  |  / 29  | : 35  |  ) 40]* | ,]*  |  -]14  |  [[/  |  . 5  |  / 29  | : 35  |  ) 40]* | ,]**18  |  (?'"L]-v 24 23
+23 [[[/  |  . 5  |  / 29  | : 35  |  ) 40]* | ,]*  |  -]14 -^ 15		| [[/  |  . 5  |  / 29  | : 35  |  ) 40]* | ,]** 18 -^ 19
+24 ( -v 27 25		| ( -v 33 25		| ? -v 54 25		| ( -v 39 25		| L -v 50 25		| '" -v 43 25		| [[[[/  |  . 5  |  / 29  | : 35  |  ) 40]* | ,]*  |  -]14  |  [[/  |  . 5  |  / 29  | : 35  |  ) 40]* | ,]**18]* -v 26 25
+25 [[[[/  |  . 5  |  / 29  | : 35  |  ) 40]* | ,]*  |  -]14  |  [[/  |  . 5  |  / 29  | : 35  |  ) 40]* | ,]**18]* -^ 23
+26 [[[[/  |  . 5  |  / 29  | : 35  |  ) 40]* | ,]*  |  -]14  |  [[/  |  . 5  |  / 29  | : 35  |  ) 40]* | ,]**18]** -^ 25
+27 ( => 28
+28 / => 29
+29 ,/-D(?'"L] -v 8 30
+30 / => 31
+31 ) => 32
+32 [[[[/  |  . 5  |  / 29  | : 35  |  ) 40]* | ,]*  |  -]14  |  [[/  |  . 5  |  / 29  | : 35  |  ) 40]* | ,]**18]** -^ 25
+33 ( => 34
+34 : => 35
+35 :,/-D(?'"L -v 8 36
+36 : => 37
+37 ) => 38
+38 [[[[/  |  . 5  |  / 29  | : 35  |  ) 40]* | ,]*  |  -]14  |  [[/  |  . 5  |  / 29  | : 35  |  ) 40]* | ,]**18]** -^ 25
+39 ( => 40
+40 ),/-D(?'"L -v 8 41
+41 ) => 42
+42 [[[[/  |  . 5  |  / 29  | : 35  |  ) 40]* | ,]*  |  -]14  |  [[/  |  . 5  |  / 29  | : 35  |  ) 40]* | ,]**18]** -^ 25
+43 ' => 44		| " => 47
+44 ~ => 45
+45 ~ => 45		| ' => 46
+46 [[[[/  |  . 5  |  / 29  | : 35  |  ) 40]* | ,]*  |  -]14  |  [[/  |  . 5  |  / 29  | : 35  |  ) 40]* | ,]**18]** -^ 25
+47 ~ => 48
+48 ~ => 48		| " => 46
+50 L => 51
+51 LD => 51		| = 3 -^ 4		| [[[[/  |  . 5  |  / 29  | : 35  |  ) 40]* | ,]*  |  -]14  |  [[/  |  . 5  |  / 29  | : 35  |  ) 40]* | ,]**18]*24 -^ 25
+52 D => 53
+53 D => 53		| * * -^ 21
+54 ? => 55
+55 ~ => 55		| ? => 56
+56 [[[[/  |  . 5  |  / 29  | : 35  |  ) 40]* | ,]*  |  -]14  |  [[/  |  . 5  |  / 29  | : 35  |  ) 40]* | ,]**18]** -^ 25
+
+
+Beginnings of my analysis of the ambiguity:
+States 24 and 9 have ambiguous state transitions as they have multiple transitions that have overlapping character lists
+So the idea is to create a new state that represents the superposition of the states that they would transition to
+Then when there is a differentiating character go back and fix the output tree to match the correct state transitions without having to reparse all of the intermediate text.
+
+24 ( -V=> 100 r1		100=28|34|40
+100 /=> 29		| :=> 35		| ),/-D(?'"L -v 8
+100 : =v 33 ( => 34 : => 35		| ),-D(?'"L =v 39 ( => 40 -v 8		| / => 101
+101= -v 27 (=> 28 / => 29		| -v 39 (=> 40 -v 8 -v 11 -v 14 -v 20 > 22 -v 24 -v 26 -^ 25 -^ 23 -^15 > 17 -^ 12 -^ 9 / => 10
+101 ) -v 11		| ,/-D(?'"L] => 102
+102 -v 27 (=> 28 / => 29 -v 8 -v 11		| -v 39 (=> 40 -v 8 -v 11 -v 14 -v 20 > 22 -v 24 -v 26 -^ 25 -^ 23 -^15 > 17 -^ 12 -^ 9 / => 10 -v 11
+
+r1 
+
+
+
+Sudo Code for the parser:
+
+
+struct syntaxNode
+{
+state state;
+syntaxNode next;
+syntaxNode parent;
+syntaxNode firstChild;
+int textStart;
+int textEnd;
+}
+
+
+struct stateTransition{
+state to;
+state returnTo;
+reformer r;
+bool consume;
+bool recordStart;
+bool recordEnd;
+}
+
+struct reformer{
+	int upBeforeChange;
+	int backtrack;
+	reformStep first;
+}
+
+struct reformStep{
+	state changeTo;
+	bool stepDownAfter;
+	bool consume;
+	bool stepUpAfter;
+	reformer next;
+}
+
+//magically populate states and chars
+stateTransition[states][chars] stm;
+//magically populate stm
+
+int end=str.length;
+
+syntaxNode currentSN=new syntaxNode;
+
+pos=-1;
+stateTransition itit= new stateTransition{
+	to:1,
+	returnTo:Null,
+	reformer:Null,
+	consume:true,
+	recordStart:true,
+	recordEnd:false
+	}
+stateTransition st= itit;
+	
+while(st && st.to!=DONE){
+	if(st.consume){ //update now so pos will be acurately reflected
+		pos++;
+		if(pos>=end){
+			ch=EOF;
+		}else{
+			ch=str[pos];
+		}
+	}
+	if(st.returnTo){ //decend into the next Identifier.
+		returnStack.push(st.returnTo);
+		s=st.to;
+		if(startRecord(s)){ // we don't actually want to record every state in the state tree but this part isn't fully thought through and needs to be revised
+			currentSN.state=s;
+			currentSN.textStart=pos;
+			currentSN.firstChild=new syntaxNode;
+			currentSN.firstChild.parent=currentSN;
+			currentSN=currentSN.firstChild;
+		}
+	}else{ 
+		if(st.to){
+			s=st.to;
+			if(endRecord(s)){ //dito
+				currentSN.textEnd=pos;
+				currentSN.next=new syntaxNode;
+				currentSN.next.parent=currentSN.parent;
+				currentSN=currentSN.next;
+				currentSN.state=s;
+				currentSN.textStart=pos;
+			}
+		}else{
+			s=returnStack.pop();
+			
+			currentSN.next=NULL;
+			currentSN=currentSN.parent;
+			currentSN.next=new syntaxNode;
+			currentSN.next.parent=currentSN.parent;
+			currentSN=currentSN.next;
+			currentSN.state=s=returnStack.pop();
+			currentSN.textStart=pos;
+		}
+	}
+	//stuff to deal with fixing the abiguities. really not done at all
+	if(st.reformer){  
+	}
+	while(r){
+		i=r.upBeforeChange;
+		while(i--){
+			currentSN=currentSN.parent;
+		}
+		r=r.next;
+	}
+	
+	
+	
+	st=stm[s][ch];
+
+}
