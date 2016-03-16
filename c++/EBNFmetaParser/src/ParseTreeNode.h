@@ -7,18 +7,24 @@
 
 #ifndef PARSETREENODE_H_
 #define PARSETREENODE_H_
+#include <iostream>
 
 class ParseTreeNode {
 public:
-	ParseTreeNode(int id=0,int start=0,ParseTreeNode * parent=nullptr, ParseTreeNode * firstChild=nullptr);
-	ParseTreeNode(int id,int start,ParseTreeNode * parent, ParseTreeNode * firstChild, int end, ParseTreeNode * next=nullptr);
+	ParseTreeNode(int id=0,const char* start=0,ParseTreeNode * parent=nullptr, ParseTreeNode * firstChild=nullptr);
+	ParseTreeNode(int id,const char* start,ParseTreeNode * parent, ParseTreeNode * firstChild, const char* end, ParseTreeNode * next=nullptr);
 	~ParseTreeNode();
+	void fixChildrenParentPointers();
+	void fixDesendantParentPointers();
 	ParseTreeNode* parent;
 	ParseTreeNode* next;
 	ParseTreeNode* firstChild;
 	int metaidentifier;
-	int textStart;
-	int textEnd;
+	const char* textStart;
+	const char* textEnd;
+	static void printToWithPrefix(std::ostream& stream, ParseTreeNode* node,std::string & prefix, const char * const* names);
+private:
+	static void assignParent(ParseTreeNode* root,ParseTreeNode* parent,bool recurse);
 };
 
 #endif /* PARSETREENODE_H_ */
