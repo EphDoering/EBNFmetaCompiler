@@ -13,17 +13,18 @@
 
 #include "ParseTreeNode.h"
 
+namespace metaParser {
+
 class ParseTree {
 public:
-	ParseTree(const char* str);//parser needs to be included
-	ParseTree(const char* str, ParseTreeNode* root,const char* const* names);
+	ParseTree(const char* const * names,ParseTreeNode* root=nullptr);
 	~ParseTree();
 
-	friend std::ostream& operator<<(std::ostream& os, const ParseTree& s);
+	friend std::ostream& operator<<(std::ostream& os, const ParseTree& t);
 private:
-	const char* str;
 	ParseTreeNode* root;
 	const char * const* names;
 };
 
+} /* namespace metaParser */
 #endif /* PARSETREE_H_ */

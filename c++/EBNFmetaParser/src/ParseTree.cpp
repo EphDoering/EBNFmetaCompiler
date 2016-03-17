@@ -7,14 +7,10 @@
 
 #include "ParseTree.h"
 
-
-ParseTree::ParseTree(const char* str):str(str),root(nullptr) {
-}
+namespace metaParser {
 
 
-ParseTree::ParseTree(const char* str, ParseTreeNode* root,
-		const char* const * names):
-		str(str),
+ParseTree::ParseTree(const char* const * names,ParseTreeNode* root):
 		root(root),
 		names(names)
 			{
@@ -25,11 +21,9 @@ ParseTree::~ParseTree() {
 	if(root) delete root;
 }
 
-namespace ParseTree{
-std::ostream& operator<<(std::ostream& os, ParseTree& t){
-    std::string str("");
-    ParseTreeNode::printToWithPrefix(os,t.root,str,t.names);
-    return os;
-}
-
-}
+std::ostream& operator<<(std::ostream& os, const ParseTree& t){
+	    std::string str("");
+	    ParseTreeNode::printToWithPrefix(os,t.root,str,t.names);
+	    return os;
+	}
+} /* namespace metaParser */

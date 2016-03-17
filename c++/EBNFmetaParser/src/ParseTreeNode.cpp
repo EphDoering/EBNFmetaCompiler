@@ -7,6 +7,8 @@
 
 #include "ParseTreeNode.h"
 
+namespace metaParser {
+
 ParseTreeNode::ParseTreeNode(int id,const char* start,ParseTreeNode * parent,ParseTreeNode * firstChild):
 parent(parent),next(nullptr),firstChild(firstChild),metaidentifier(id),textStart(start){
 	//text end isn't set
@@ -59,3 +61,5 @@ void ParseTreeNode::printToWithPrefix(std::ostream& stream, ParseTreeNode* node,
 			printToWithPrefix(stream,node->next,prefix,names);
 		}
 }
+
+} /* namespace metaParser */

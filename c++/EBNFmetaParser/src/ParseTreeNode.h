@@ -9,6 +9,8 @@
 #define PARSETREENODE_H_
 #include <iostream>
 
+namespace metaParser {
+
 class ParseTreeNode {
 public:
 	ParseTreeNode(int id=0,const char* start=0,ParseTreeNode * parent=nullptr, ParseTreeNode * firstChild=nullptr);
@@ -26,5 +28,7 @@ public:
 private:
 	static void assignParent(ParseTreeNode* root,ParseTreeNode* parent,bool recurse);
 };
+
+} /* namespace metaParser */
 
 #endif /* PARSETREENODE_H_ */
