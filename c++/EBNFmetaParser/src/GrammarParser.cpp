@@ -9,62 +9,42 @@
 
 namespace metaParser {
 
-enum EBNFmID {
-	SYNTAX,
-	SYNTAX_RULE,
-	DEFINITIONS_LIST,
-	SINGLE_DEFINITION,
-	TERM,
-	EXCEPTION,
-	FACTOR,
-	PRIMARY,
-	EMPTY,
-	OPTIONAL_SEQUENCE,
-	REPEATED_SEQUENCE,
-	GROUPED_SEQUENCE,
-	TERMINAL,
-	META_IDENTIFIER,
-	INTEGER,
-	SPECIAL_SEQUENCE
-};
-
-
-GrammarParser::GrammarParser(const char* grammarStr,GrammarParser* gramParser):
-		Parser(names,numNames,grammarStr,gramParser) {
+GrammarParser::GrammarParser(const char* grammarStr,int maxLength,GrammarParser* gramParser):
+		Parser(names,numNames,grammarStr,maxLength,gramParser) {
 
 }
 
 GrammarParser* GrammarParser::getDefaultParser() {
 	if(!defaultGrammarParser){
-
-		//currently not a grammar parsing grammar, but it needs to be to work.
+		//TODO turn into a minimally working EBNF grammar
+		//currently not a grammar parsing grammar, but it needs to be, to work.
 		const char*	inputStr="FIRST = \"yay\"|SECOND,\"no yay\".\nSECOND = \"jk\".";
-		ParseTree* temp =new ParseTree(names,
+		ParseTreeNode* root=
 			new ParseTreeNode(SYNTAX,inputStr+0,nullptr,
-				new ParseTreeNode(SYNTAX_RULE,inputStr+0,nullptr,
-				   new ParseTreeNode(META_IDENTIFIER,inputStr+0,nullptr,nullptr,inputStr+5,
-				   new ParseTreeNode(DEFINITIONS_LIST,inputStr+8,nullptr,
-					  new ParseTreeNode(SINGLE_DEFINITION,inputStr+8,nullptr,
+				new ParseTreeNode(SYNTAXRULE,inputStr+0,nullptr,
+				   new ParseTreeNode(METAIDENTIFIER,inputStr+0,nullptr,nullptr,inputStr+5,
+				   new ParseTreeNode(DEFINITIONSLIST,inputStr+8,nullptr,
+					  new ParseTreeNode(SINGLEDEFINITION,inputStr+8,nullptr,
 						 new ParseTreeNode(PRIMARY,inputStr+8,nullptr,
 							 new ParseTreeNode(TERMINAL,inputStr+8,nullptr,nullptr,inputStr+13),inputStr+13),inputStr+13,
-					  new ParseTreeNode(SINGLE_DEFINITION,inputStr+14,nullptr,
+					  new ParseTreeNode(SINGLEDEFINITION,inputStr+14,nullptr,
 						  new ParseTreeNode(PRIMARY,inputStr+14,nullptr,
-							 new ParseTreeNode(META_IDENTIFIER,inputStr+14,nullptr,nullptr,inputStr+20),inputStr+20,
+							 new ParseTreeNode(METAIDENTIFIER,inputStr+14,nullptr,nullptr,inputStr+20),inputStr+20,
 						  new ParseTreeNode(PRIMARY,inputStr+21,nullptr,
 							  new ParseTreeNode(TERMINAL,inputStr+21,nullptr,nullptr,inputStr+29),inputStr+29)),inputStr+29)),inputStr+29)),inputStr+31,
-				new ParseTreeNode(SYNTAX_RULE,inputStr+31,nullptr,
-					new ParseTreeNode(META_IDENTIFIER,inputStr+31,nullptr,nullptr,inputStr+37,
-					new ParseTreeNode(DEFINITIONS_LIST,inputStr+40,nullptr,
-					   new ParseTreeNode(SINGLE_DEFINITION,inputStr+40,nullptr,
+				new ParseTreeNode(SYNTAXRULE,inputStr+31,nullptr,
+					new ParseTreeNode(METAIDENTIFIER,inputStr+31,nullptr,nullptr,inputStr+37,
+					new ParseTreeNode(DEFINITIONSLIST,inputStr+40,nullptr,
+					   new ParseTreeNode(SINGLEDEFINITION,inputStr+40,nullptr,
 						   new ParseTreeNode(PRIMARY,inputStr+40,nullptr,
 							   new ParseTreeNode(TERMINAL,inputStr+40,nullptr,nullptr,inputStr+44),inputStr+44),inputStr+44),inputStr+44)),inputStr+45)),inputStr+45)
-			);
-		defaultGrammarParser = new GrammarParser(temp);
-		delete temp;
+			;
+		root->fixDesendantParentPointers();
+		defaultGrammarParser = new GrammarParser(new ParseTree(names,root));
 
 		//Upgrade default parser
 		//GrammarParser* old=defaultGrammarParser;
-		//defaultGrammarParser=new GrammarParser("UpgradeString1");
+		//defaultGrammarParser=new GrammarParser("UpgradeString1"); TODO turn into more useful grammar
 		//delete old;
 		//repeat
 
@@ -80,27 +60,15 @@ GrammarParser::~GrammarParser() {
 }
 
 GrammarParser* GrammarParser::defaultGrammarParser=nullptr;
-const char* const GrammarParser::names[]={
-	"SYNTAX",
-	"SYNTAX RULE",
-	"DEFINITIONS LIST",
-	"SINGLE DEFINITION",
-	"TERM",
-	"EXCEPTION",
-	"FACTOR",
-	"PRIMARY",
-	"EMPTY",
-	"OPTIONAL SEQUENCE",
-	"REPEATED SEQUENCE",
-	"GROUPED SEQUENCE",
-	"TERMINAL",
-	"META IDENTIFIER",
-	"INTEGER",
-	"SPECIAL SEQUENCE"};
 
-GrammarParser::GrammarParser(ParseTree* grammarTree):Parser(names,numNames,grammarTree) {
+GrammarParser::GrammarParser(ParseTree* grammarTree):Parser(names,NUM_EBNFmID,grammarTree) {
 
 }
 
 
 } /* namespace metaParser */
+
+
+#define EBNFMETANAMES_VAR const char* const GrammarParser::names[]
+#include "EBNFmetaNames.h"
+#undef EBNFMETANAMES_VAR

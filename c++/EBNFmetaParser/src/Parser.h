@@ -9,6 +9,7 @@
 #define PARSER_H_
 
 #include "ParseTree.h"
+#include "EBNFmetaNames.h"
 
 
 namespace metaParser {
@@ -29,9 +30,9 @@ class GrammarParser;
 
 class Parser {
 public:
-	Parser(const char* const * names,unsigned int numNames,const char* grammar, GrammarParser* grammarParser=nullptr);
+	Parser(const char* const * names,unsigned int numNames,const char* grammar,int maxLength, GrammarParser* grammarParser=nullptr);
 
-	ParseTree* parse(const char* strWithinGrammar);
+	ParseTree* parse(const char* strWithinGrammar,int maxLength);
 	~Parser();
 protected:
 	//only for grammar parser bootstrap

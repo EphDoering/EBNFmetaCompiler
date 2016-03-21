@@ -14,7 +14,7 @@ namespace metaParser {
 
 class GrammarParser: public Parser {
 public:
-	GrammarParser(const char* grammarStr,GrammarParser* gramParser=nullptr);
+	GrammarParser(const char* grammarStr,int maxLength,GrammarParser* gramParser=nullptr);
 	static GrammarParser* getDefaultParser();
 	void setDefaultParser();
 	~GrammarParser();
