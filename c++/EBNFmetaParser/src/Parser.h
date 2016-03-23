@@ -10,21 +10,10 @@
 
 #include "ParseTree.h"
 #include "EBNFmetaNames.h"
+#include "StateTransition.h"
 
 
 namespace metaParser {
-
-typedef int State;
-enum TransitionType {
-	T_CONSUME,
-	T_DIRECT,
-	T_DESEND,
-	T_ASCEND,
-	T_START_COUNTER,
-	T_COUNT,
-	T_EXCEPT,
-	T_ERROR
-};
 
 class GrammarParser;
 
