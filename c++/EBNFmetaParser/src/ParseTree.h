@@ -20,7 +20,7 @@ public:
 	ParseTree(const char* const * names,ParseTreeNode* root=nullptr);
 	~ParseTree();
 
-	friend std::ostream& operator<<(std::ostream& os, const ParseTree& t);
+	friend std::ostream& operator<<(std::ostream& os, const ParseTree* t);
 private:
 	ParseTreeNode* root;
 	const char * const* names;

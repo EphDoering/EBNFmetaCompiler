@@ -21,9 +21,9 @@ ParseTree::~ParseTree() {
 	if(root) delete root;
 }
 
-std::ostream& operator<<(std::ostream& os, const ParseTree& t){
+std::ostream& operator<<(std::ostream& os, const ParseTree* t){
 	    std::string str("");
-	    ParseTreeNode::printToWithPrefix(os,t.root,str,t.names);
+	    ParseTreeNode::printToWithPrefix(os,t->root,str,t->names);
 	    return os;
 	}
 } /* namespace metaParser */
