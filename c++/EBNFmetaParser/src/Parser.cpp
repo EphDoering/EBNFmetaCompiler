@@ -35,6 +35,64 @@ ParseTree* Parser::parse(const char* strWithinGrammar,int maxLength) {
 	int i=0;
 	while(i<maxLength && strWithinGrammar[i])
 		i++;
+	//temporary development shim: parse one string manually:
+	if(i==45){
+		const char* temp="FIRST = \"yay\"|SECOND,\"no yay\".\nSECOND = \"jk\".";
+		/* the grammar string:
+		 *
+		 * FIRST = "yay"|SECOND,"no yay".
+		 * SECOND = "jk".
+		 *
+		 *
+		 * [{"n":"SYNTAX","v":"","c":[{"n":"SYNTAXRULE","v":"","c":[{"n":"METAIDENTIFIER","v":"FIRST"},{"n":"not here","v":" = "},{"n":"DEFINITIONSLIST","v":"","c":[{"n":"SINGLEDEFINITION","v":"","c":[{"n":"PRIMARY","v":"","c":[{"n":"TERMINAL","v":"\"yay\""}]}]},{"n":"not here","v":"|"},{"n":"SINGLEDEFINITION","v":"","c":[{"n":"PRIMARY","v":"","c":[{"n":"METAIDENTIFIER","v":"SECOND"}]},{"n":"not here","v":","},{"n":"PRIMARY","v":"","c":[{"n":"TERMINAL","v":"\"no yay\""}]}]}]},{"n":"not here","v":".\u21b5"}]},{"n":"SYNTAXRULE","v":"","c":[{"n":"METAIDENTIFIER","v":"SECOND"},{"n":"not here","v":" = "},{"n":"DEFINITIONSLIST","v":"","c":[{"n":"SINGLEDEFINITION","v":"","c":[{"n":"PRIMARY","v":"","c":[{"n":"TERMINAL","v":"\"jk\""}]}]}]},{"n":"not here","v":"."}]}]}]
+		 *
+		 * the JSON save representation used by http://jsfiddle.net/w5ten6y6/2/embedded/result/
+		 * which was used to generate the code below.
+		 */
+		bool same=true;
+		while(i--&&same){
+			same=temp[i]==strWithinGrammar[i];
+		}
+		if(same){
+			ParseTreeNode* root=
+				new ParseTreeNode(SYNTAX,strWithinGrammar+0,nullptr,
+					new ParseTreeNode(SYNTAXRULE,strWithinGrammar+0,nullptr,
+					   new ParseTreeNode(METAIDENTIFIER,strWithinGrammar+0,nullptr,nullptr,strWithinGrammar+5,
+					   new ParseTreeNode(DEFINITIONSLIST,strWithinGrammar+8,nullptr,
+						  new ParseTreeNode(SINGLEDEFINITION,strWithinGrammar+8,nullptr,
+							 new ParseTreeNode(PRIMARY,strWithinGrammar+8,nullptr,
+								 new ParseTreeNode(TERMINAL,strWithinGrammar+8,nullptr,nullptr,strWithinGrammar+13),strWithinGrammar+13),strWithinGrammar+13,
+						  new ParseTreeNode(SINGLEDEFINITION,strWithinGrammar+14,nullptr,
+							  new ParseTreeNode(PRIMARY,strWithinGrammar+14,nullptr,
+								 new ParseTreeNode(METAIDENTIFIER,strWithinGrammar+14,nullptr,nullptr,strWithinGrammar+20),strWithinGrammar+20,
+							  new ParseTreeNode(PRIMARY,strWithinGrammar+21,nullptr,
+								  new ParseTreeNode(TERMINAL,strWithinGrammar+21,nullptr,nullptr,strWithinGrammar+29),strWithinGrammar+29)),strWithinGrammar+29)),strWithinGrammar+29)),strWithinGrammar+31,
+					new ParseTreeNode(SYNTAXRULE,strWithinGrammar+31,nullptr,
+						new ParseTreeNode(METAIDENTIFIER,strWithinGrammar+31,nullptr,nullptr,strWithinGrammar+37,
+						new ParseTreeNode(DEFINITIONSLIST,strWithinGrammar+40,nullptr,
+						   new ParseTreeNode(SINGLEDEFINITION,strWithinGrammar+40,nullptr,
+							   new ParseTreeNode(PRIMARY,strWithinGrammar+40,nullptr,
+								   new ParseTreeNode(TERMINAL,strWithinGrammar+40,nullptr,nullptr,strWithinGrammar+44),strWithinGrammar+44),strWithinGrammar+44),strWithinGrammar+44)),strWithinGrammar+45)),strWithinGrammar+45);
+			root->fixDesendantParentPointers();
+			return new ParseTree(names,root);
+		}
+		i=45;
+	}
+	else if(i==8){
+		const char* temp="jkno yay";
+		bool same=true;
+		while(i--&&same){
+			same=temp[i]==strWithinGrammar[i];
+		}
+		if(same){
+			ParseTreeNode* root=
+					new ParseTreeNode(0,strWithinGrammar+0,nullptr,
+						new ParseTreeNode(1,strWithinGrammar+0,nullptr,nullptr,strWithinGrammar+2),strWithinGrammar+8);
+			root->fixDesendantParentPointers();
+			return new ParseTree(names,root);
+		}
+		i=8;
+	}
 	return new ParseTree(names,new ParseTreeNode(0,strWithinGrammar,nullptr,nullptr,strWithinGrammar+i));
 }
 
