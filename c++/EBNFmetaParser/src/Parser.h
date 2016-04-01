@@ -23,7 +23,7 @@ class Parser {
 public:
 	Parser(const char* const * names,unsigned int numNames,const char* grammar,int maxLength, GrammarParser* grammarParser=nullptr);
 
-	ParseTree* parse(const char* strWithinGrammar,int maxLength);
+	ParseTree* parse(const char* strWithinGrammar,int maxLength,State startState=0);
 	~Parser();
 protected:
 	//only for grammar parser bootstrap
@@ -32,10 +32,12 @@ protected:
 private:
 	const char* const* names;
 	int numNames;
-	void continueInitFromGrammarTree(ParseTree* parsedGrammar);
-	void updateSTOL(State entryState, ParseTreeNode* node, State exitState);
+
 	State maxState;
-	State getIdentifier(std::map<std::string,State>& states, ParseTreeNode * metaIdentifier);
+	State maxRecordedState;
+	State minTerminableState;
+	bool nullTerminable;
+	StateTransition** stateTransitionMatrix; //array of StateTransitionPointers
 };
 
 } /* namespace metaParser */

@@ -17,6 +17,7 @@ enum StateTransitionType{
 	T_DESEND,
 	T_ASCEND,
 	T_START_COUNTER,
+	T_COUNT,
 	T_EXCEPT,
 	T_ERROR
 };
@@ -90,6 +91,9 @@ struct StateTransitionCompare{
 						diff=lhs->startCount.exitTo-rhs->startCount.exitTo;
 						if(!diff)
 							diff=lhs->startCount.count-rhs->startCount.count;
+						break;
+					case T_COUNT:
+						diff=0;
 						break;
 					case T_EXCEPT:
 						diff=lhs->except.exception-rhs->except.exception;

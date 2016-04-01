@@ -8,20 +8,31 @@
 
 #include "Parser.h"
 #include "GrammarParser.h"
+#include "STOL.h"
 
 #include <set>
+#include <vector>
+#include <limits>
 
 namespace metaParser {
+
+
+const State DONE=-1;
+const int EOFbyte = -1;
+const int maxStackDepth=0x7FFFFF;
 
 Parser::Parser(const char* const * names, unsigned int numNames,
 		const char* grammar,int maxLength, GrammarParser* grammarParser)
 	:names(names),
-	 numNames(numNames) {
+	 numNames(numNames),
+	 maxRecordedState(numNames){
 	if(!grammarParser)
 		grammarParser=GrammarParser::getDefaultParser();
-	ParseTree* temp=grammarParser->parse(grammar, maxLength);
-	continueInitFromGrammarTree(temp);
-	delete temp;
+	ParseTree* grammarTree=grammarParser->parse(grammar, maxLength);
+
+	STOL mySTOL(grammarTree,names,numNames,grammarParser);
+	maxState=mySTOL.getMaxState();
+	delete grammarTree;
 }
 
 
@@ -29,7 +40,7 @@ Parser::~Parser() {
 	// TODO Auto-generated destructor stub
 }
 
-ParseTree* Parser::parse(const char* strWithinGrammar,int maxLength) {
+ParseTree* Parser::parse(const char* strWithinGrammar,int maxLength,State startState) {
 	//TODO Part 3: Use the state table to parse the incoming string
 
 
@@ -96,115 +107,106 @@ ParseTree* Parser::parse(const char* strWithinGrammar,int maxLength) {
 		i=8;
 	}
 	return new ParseTree(names,new ParseTreeNode(0,strWithinGrammar,nullptr,nullptr,strWithinGrammar+i));
+
+	ParseTree* returnTree=new ParseTree(names,nullptr);
+
+	ParseTreeNode** next=&returnTree->root;
+	ParseTreeNode* parent=nullptr;
+
+	std::vector<State> stateStack;
+	unsigned int recordAgainAt=maxStackDepth;
+	std::vector<unsigned int> countStack;
+
+	const char* pos=strWithinGrammar;
+	const char* end=strWithinGrammar+maxLength;
+	int currentByte=*pos;
+
+	State s;
+
+	StateTransition init(T_DESEND,startState,DONE);
+
+	StateTransition* nextTransition= &init;
+
+	while(nextTransition && pos<end){
+		s=nextTransition->to;
+		switch(nextTransition->type){
+			case T_CONSUME:
+				pos++;
+				if(pos==end){
+					goto endOfString;
+				}
+				currentByte=*pos;
+				break;
+			case T_DIRECT:
+				break;
+			case T_DESEND:
+				stateStack.push_back(nextTransition->desend.exitTo);
+				if(stateStack.size()<recordAgainAt){
+					if(s<maxRecordedState){
+						parent=*next=new ParseTreeNode(s,pos,parent);
+						next=&(*next)->firstChild;
+					}else {
+						recordAgainAt=stateStack.size();
+					}
+				}
+				break;
+			case T_ASCEND:
+				if(stateStack.size()<=recordAgainAt){
+					recordAgainAt=maxStackDepth;
+					parent->textEnd=pos;
+					next=&parent->next;
+					parent=parent->parent;
+				}
+				if(stateStack.size()==0){
+					return returnTree;
+				}
+				s=stateStack.back();
+				stateStack.pop_back();
+				break;
+			case T_START_COUNTER:
+				countStack.push_back(nextTransition->startCount.count-1);
+				stateStack.push_back(nextTransition->startCount.exitTo);
+				break;
+			case T_COUNT:
+				if(!(--countStack.back())){
+					countStack.pop_back();
+					s=stateStack.back();
+					stateStack.pop_back();
+				}
+				break;
+			case T_EXCEPT:
+			case T_ERROR:
+				//TODO Debug ERROR
+				break;
+		}
+		nextTransition=stateTransitionMatrix[(s<<8)+currentByte];
+	}
+	if(!currentByte && nullTerminable){
+endOfString:
+		int left=stateStack.size();
+		while(left--){
+			if(stateStack[i]<minTerminableState){
+				break;
+			}
+			parent->textEnd=pos;
+			parent=parent->parent;
+			stateStack.pop_back();
+		}
+	}
+
+	if(stateStack.size()){
+	//we errored so wrap the root in an error node
+		returnTree->root=new ParseTreeNode(-1,strWithinGrammar,nullptr,returnTree->root,pos);
+	}
+	return returnTree;
 }
 
 //only for bootstrapped grammar parser
-Parser::Parser(const char* const * names, unsigned int numNames,
-		ParseTree* parsedGrammar)
+Parser::Parser(const char* const * names, unsigned int numNames, ParseTree* parsedGrammar)
 	:names(names),
 	 numNames(numNames){
-	continueInitFromGrammarTree(parsedGrammar);
-}
-
-void Parser::continueInitFromGrammarTree(ParseTree* parsedGrammar) {
-	maxState=0;
-	/*TODO continueInitFromGrammarTree body
-	 * Part 1: Create a state transition options list (STOL)
-	 * 		Step a: Create an empty set of METAIDENTIFIER names.
-	 * 		Step b: Create a map of METAIDENTIFIER NAMES to numbers
-	 * 		Step c: add the METAIDENTIFIER for the first rule to the map.
-	 * 		Step d: for each SYNTAX RULE
-	 * 					IF the corresponding METAIDENTIFIER is in the map and not in the set
-	 * 						call updateSTOL with the corresponding, entry state,  DEFINITIONSLIST, and
-	 * 							either -1 or -2 as the exit state depending on if you want to record
-	 * 						add it to the set
-	 * 		Step e: repeat d until nothing was added to the set.
-	 * 		Step f: for each METAIDENTIFIER in the map, that's not in the set
-	 * 					search the parent grammar tree for a matching SYNTAXRULE
-	 * 					if found
-	 * 						call updateSTOL with the corresponding, entry state,  DEFINITIONSLIST, and
-	 * 							either -1 or -2 as the exit state depending on if you want to record
-	 * 						add it to the set
-	 * 		Step g: repeat d-f until nothing is added in step f
-	 * 		Step h: If there is anything in the map that's not in the set error with Undefined METAIDENTIFIERs
-	 *
-	 * Part 2: Generate a state transition table
-	 * 		Step a: find the conditions for all state transition options
-	 * 		Step b: find intersecting conditions and generate superStates with corresponding reformers.
-	 * 		Step c: edit the STOL to reflect the superStates
-	 * 		Step d: renumber the states to remove unnecessary states and shrink the domain.
-	 * 		Step e: tabulate the now unambiguous STOL.
-	 */
-}
-
-void Parser::updateSTOL(State entryState,ParseTreeNode* node,State exitState){
-	switch(node->metaidentifier){
-	case DEFINITIONSLIST:
-		node= node->firstChild;
-		while(node){
-			updateSTOL(entryState,node,exitState);
-			node=node->next;
-		}
-		break;
-	case SINGLEDEFINITION:
-		node=node->firstChild;
-		while(node->next){
-			State addedState=++maxState;
-			updateSTOL(entryState,node,addedState);
-			entryState=addedState;
-			node=node->next;
-		}
-		updateSTOL(entryState,node,exitState);
-		break;
-	case TERM://TODO check for exception
-	case EXCEPTION://TODO check for regular grammar
-	case FACTOR://FIXME check for multiplier
-	case PRIMARY:
-		updateSTOL(entryState,node->firstChild,exitState);
-		break;
-	case EMPTY:
-		//TODO Empty updateSTOL
-		//Create a direct state transition and add it as an option to entry state
-		//addOption(entryState,StateTransition(T_DIRECT,exitState));
-		break;
-	case OPTIONALSEQUENCE:
-		//TODO OPTIONALSEQUENCE updateSTOL
-	case REPEATEDSEQUENCE:
-		//TODO REPEATEDSEQUENCE updateSTOL
-	case GROUPEDSEQUENCE:
-		//TODO GROUPEDSEQUENCE updateSTOL
-	case TERMINAL:
-		/*TODO: TERMINAL updateSTOL
-		 *
-		 *check if it has a subnode with quote character lengths otherwise assume 1
-		 *check Create  length-(2*quotelength)-1 states and for each add a T_CONSUME linking them together
-		 */
-		break;
-	case METAIDENTIFIER:
-		//TODO METAIDENTIFIER updateSTOL
-		//check the map for the corresponding META IDENTIFIER, if it's not there, add it as ++maxState.
-		//Create a descend state transition and add it as an option to entry state
-		//addOption(entryState,StateTransition(T_DECEND,metaEntry,exitState));
-		break;
-	case INTEGER://probably will never get to...
-	case SPECIALSEQUENCE://no idea if we'll ever be able to deal with these.
-	default:
-		throw 50;
-	}
-}
-
-State Parser::getIdentifier(std::map<std::string,State>& states, ParseTreeNode* metaIdentifier) {
-	std::string key;
-	ParseTreeNode* node=metaIdentifier->firstChild;
-	while(node){
-		key.push_back(*node->textStart);
-		node=node->next;
-	}
-	auto ret=states.insert(std::pair<std::string,State>(key,maxState+1));
-	if(ret.second){
-		maxState++;
-	}
-	return *ret.first;
+	STOL mySTOL(parsedGrammar,names,numNames);
+	//TODO finish processing
 }
 
 } /* namespace metaParser */
