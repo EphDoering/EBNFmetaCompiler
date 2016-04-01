@@ -9,6 +9,8 @@
 #include "Parser.h"
 #include "GrammarParser.h"
 
+#include <set>
+
 namespace metaParser {
 
 Parser::Parser(const char* const * names, unsigned int numNames,
@@ -191,8 +193,19 @@ void Parser::updateSTOL(State entryState,ParseTreeNode* node,State exitState){
 	}
 }
 
+State Parser::getIdentifier(std::map<std::string,State>& states, ParseTreeNode* metaIdentifier) {
+	std::string key;
+	ParseTreeNode* node=metaIdentifier->firstChild;
+	while(node){
+		key.push_back(*node->textStart);
+		node=node->next;
+	}
+	auto ret=states.insert(std::pair<std::string,State>(key,maxState+1));
+	if(ret.second){
+		maxState++;
+	}
+	return *ret.first;
+}
+
 } /* namespace metaParser */
-
-
-
 

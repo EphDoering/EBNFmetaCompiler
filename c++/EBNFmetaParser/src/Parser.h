@@ -12,6 +12,8 @@
 #include "EBNFmetaNames.h"
 #include "StateTransition.h"
 
+#include <string>
+#include <map>
 
 namespace metaParser {
 
@@ -33,6 +35,7 @@ private:
 	void continueInitFromGrammarTree(ParseTree* parsedGrammar);
 	void updateSTOL(State entryState, ParseTreeNode* node, State exitState);
 	State maxState;
+	State getIdentifier(std::map<std::string,State>& states, ParseTreeNode * metaIdentifier);
 };
 
 } /* namespace metaParser */

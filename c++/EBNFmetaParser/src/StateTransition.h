@@ -51,6 +51,8 @@ struct StateTransition {
 		case T_EXCEPT:
 				except.exception=s;
 			break;
+		default:
+			break;
 		}
 	};
 	StateTransition(StateTransitionType type,State to,char byte):type(type),to(to),consume(byte){};
@@ -63,6 +65,42 @@ struct StateTransition {
 		StateTransitionDataStartCounter startCount;
 		StateTransitionDataExcept except;
 	};
+};
+
+struct StateTransitionCompare{
+	bool operator() (const StateTransition* lhs, const StateTransition* rhs) const{
+		int diff=lhs->type-rhs->type;
+		if(!diff){
+			diff=lhs->to-rhs->to;
+			if(!diff){
+				switch(lhs->type){
+					case T_CONSUME:
+						diff=lhs->consume.byte-rhs->consume.byte;
+						break;
+					case T_DIRECT:
+						diff=0;
+						break;
+					case T_DESEND:
+						diff=lhs->desend.exitTo-rhs->desend.exitTo;
+						break;
+					case T_ASCEND:
+						diff=0;
+						break;
+					case T_START_COUNTER:
+						diff=lhs->startCount.exitTo-rhs->startCount.exitTo;
+						if(!diff)
+							diff=lhs->startCount.count-rhs->startCount.count;
+						break;
+					case T_EXCEPT:
+						diff=lhs->except.exception-rhs->except.exception;
+						break;
+					case T_ERROR:
+						diff=0;
+				}
+			}
+		}
+		return diff<0;
+	}
 };
 
 } /* namespace metaParser */

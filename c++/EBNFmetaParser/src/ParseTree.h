@@ -21,7 +21,6 @@ public:
 	~ParseTree();
 
 	friend std::ostream& operator<<(std::ostream& os, const ParseTree* t);
-private:
 	ParseTreeNode* root;
 	const char * const* names;
 };
