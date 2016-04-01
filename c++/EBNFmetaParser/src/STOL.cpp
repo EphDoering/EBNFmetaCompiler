@@ -12,7 +12,14 @@
 
 namespace metaParser {
 
-STOL::STOL(ParseTree* parsedGrammar,const char* const * names,unsigned int numNames,GrammarParser* grammarParser):transitions(),metaIDs() {
+STOL::STOL(ParseTree* parsedGrammar,const char* const * names,unsigned int numNames,GrammarParser* grammarParser):
+		transitions(),
+		stol(),
+		metaIDs(),
+		maxState(0),
+		metaIdsNeedingProcessed(),
+		unprocessedSyntaxRules(),
+		processedMetaIds(){
 
 	//fill metaIDs with the names we're returning.
 	if(grammarParser){
@@ -30,10 +37,13 @@ STOL::STOL(ParseTree* parsedGrammar,const char* const * names,unsigned int numNa
 
 	//grab all the syntax rules by MetaId
 	ParseTreeNode* syntaxRule=parsedGrammar->root->firstChild;
+	metaIdsNeedingProcessed.insert(getIdentifier(syntaxRule->firstChild));
 	while(syntaxRule){
 		unprocessedSyntaxRules.insert(std::pair<MetaID,ParseTreeNode*>(getIdentifier(syntaxRule->firstChild),syntaxRule->firstChild->next));
 		syntaxRule=syntaxRule->next;
 	}
+
+
 
 
 	while(metaIdsNeedingProcessed.size()){
