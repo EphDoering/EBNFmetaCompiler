@@ -25,19 +25,28 @@ Parser::Parser(const char* const * names, unsigned int numNames,
 		const char* grammar,int maxLength, GrammarParser* grammarParser)
 	:names(names),
 	 numNames(numNames),
-	 maxRecordedState(numNames){
+	 nullTerminable(true){
 	if(!grammarParser)
 		grammarParser=GrammarParser::getDefaultParser();
 	ParseTree* grammarTree=grammarParser->parse(grammar, maxLength);
 
-	STOL mySTOL(grammarTree,names,numNames,grammarParser);
-	maxState=mySTOL.getMaxState();
+	finishConstruction(STOL(grammarTree,names,numNames,grammarParser));
+
 	delete grammarTree;
 }
 
+//only for bootstrapped grammar parser
+Parser::Parser(const char* const * names, unsigned int numNames, ParseTree* parsedGrammar)
+	:names(names),
+	 numNames(numNames),
+	 nullTerminable(true){
+	finishConstruction(STOL(parsedGrammar,names,numNames));
+}
 
 Parser::~Parser() {
 	// TODO Auto-generated destructor stub
+	if(stateTransitionMatrix)
+		delete[] stateTransitionMatrix;
 }
 
 ParseTree* Parser::parse(const char* strWithinGrammar,int maxLength,State startState) {
@@ -179,6 +188,9 @@ ParseTree* Parser::parse(const char* strWithinGrammar,int maxLength,State startS
 				//TODO Debug ERROR
 				break;
 		}
+		while(s==-1){
+
+		}
 		nextTransition=stateTransitionMatrix[(s<<8)+currentByte];
 	}
 	if(!currentByte && nullTerminable){
@@ -201,12 +213,11 @@ endOfString:
 	return returnTree;
 }
 
-//only for bootstrapped grammar parser
-Parser::Parser(const char* const * names, unsigned int numNames, ParseTree* parsedGrammar)
-	:names(names),
-	 numNames(numNames){
-	STOL mySTOL(parsedGrammar,names,numNames);
-	//TODO finish processing
+void Parser::finishConstruction(const STOL& stol) {
+	maxRecordedState=numNames;
+	maxState=stol.getMaxState();
+	minTerminableState=0;
+	stateTransitionMatrix=nullptr;
 }
 
 } /* namespace metaParser */

@@ -11,6 +11,7 @@
 #include <map>
 #include <set>
 #include <vector>
+#include <string>
 
 #include "StateTransition.h"
 #include "ParseTree.h"
@@ -42,6 +43,7 @@ private:
 	std::set<MetaID> metaIdsNeedingProcessed;
 	std::set<MetaID> processedMetaIds;
 	std::map<MetaID,ParseTreeNode*> unprocessedSyntaxRules;
+    bool queueNewLookups;
 
 	MetaID getIdentifier(ParseTreeNode * metaIdentifier);
 	MetaID getIdentifier(const std::string& name);

@@ -18,6 +18,7 @@
 namespace metaParser {
 
 class GrammarParser;
+class STOL;
 
 class Parser {
 public:
@@ -38,6 +39,8 @@ private:
 	State minTerminableState;
 	bool nullTerminable;
 	StateTransition** stateTransitionMatrix; //array of StateTransitionPointers
+
+	void finishConstruction(const STOL& stol);
 };
 
 } /* namespace metaParser */

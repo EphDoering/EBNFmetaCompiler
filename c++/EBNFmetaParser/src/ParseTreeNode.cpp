@@ -11,7 +11,7 @@ namespace metaParser {
 
 ParseTreeNode::ParseTreeNode(int id,const char* start,ParseTreeNode * parent,ParseTreeNode * firstChild):
 parent(parent),next(nullptr),firstChild(firstChild),metaidentifier(id),textStart(start){
-	//text end isn't set
+	//textEnd isn't set
 }
 
 ParseTreeNode::ParseTreeNode(int id,const char* start,ParseTreeNode * parent,ParseTreeNode * firstChild,const char* end,ParseTreeNode * next):

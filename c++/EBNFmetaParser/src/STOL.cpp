@@ -15,11 +15,13 @@ namespace metaParser {
 STOL::STOL(ParseTree* parsedGrammar,const char* const * names,unsigned int numNames,GrammarParser* grammarParser):
 		transitions(),
 		stol(),
-		metaIDs(),
 		maxState(0),
+		metaIDs(),
 		metaIdsNeedingProcessed(),
+		processedMetaIds(),
 		unprocessedSyntaxRules(),
-		processedMetaIds(){
+		queueNewLookups(false)
+		{
 
 	//fill metaIDs with the names we're returning.
 	if(grammarParser){
@@ -34,7 +36,6 @@ STOL::STOL(ParseTree* parsedGrammar,const char* const * names,unsigned int numNa
 			getIdentifier(names[i]);
 		}
 	}
-
 	//grab all the syntax rules by MetaId
 	ParseTreeNode* syntaxRule=parsedGrammar->root->firstChild;
 	metaIdsNeedingProcessed.insert(getIdentifier(syntaxRule->firstChild));
@@ -43,7 +44,7 @@ STOL::STOL(ParseTree* parsedGrammar,const char* const * names,unsigned int numNa
 		syntaxRule=syntaxRule->next;
 	}
 
-
+	queueNewLookups=true;
 
 
 	while(metaIdsNeedingProcessed.size()){
@@ -82,6 +83,9 @@ void STOL::insert(State s, StateTransition* st) { //this will eventually delete 
 		delete st;
 		st=*insertRet.first;
 	}//now we have only the one copy of that particular state transition
+	if(stol.size()<=maxState){
+		stol.resize(maxState+1);
+	}
 	stol[s].insert(st);
 }
 
@@ -158,6 +162,9 @@ void STOL::updateSTOL(State entryState,ParseTreeNode* node,State exitState){
 MetaID STOL::getIdentifier(ParseTreeNode* metaIdentifier) {
 	std::string key;
 	ParseTreeNode* node=metaIdentifier->firstChild;
+	if(!node){
+		key.append(metaIdentifier->textStart,metaIdentifier->textEnd);
+	}
 	while(node){
 		key.push_back(*node->textStart);
 		node=node->next;
@@ -168,10 +175,20 @@ MetaID STOL::getIdentifier(ParseTreeNode* metaIdentifier) {
 
 MetaID STOL::getIdentifier(const std::string& name) {
 	auto ret=metaIDs.insert(std::pair<std::string,State>(name,maxState+1));
-	if(ret.second){
-		maxState++;
+	MetaID retID=(*ret.first).second;
+	if(queueNewLookups){
+		if(ret.second){
+			maxState++;
+			//TODO check for built in syntax.
+		}
+		if(processedMetaIds.find(retID)==processedMetaIds.end())
+			metaIdsNeedingProcessed.insert(retID);
+	}else{
+		if(ret.second){
+			maxState++;
+		}
 	}
-	return (*ret.first).second;
+	return retID;
 }
 
 
